@@ -3,7 +3,9 @@ library IEEE;
 use IEEE.STD_LOGIC.1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
 
+-- =========================================================================
 -- DEBAUNCER
+-- =========================================================================
 
 entity debauncer is
     port (
@@ -18,10 +20,11 @@ entity debauncer is
 end debauncer;
 
 architecture Behavioral of debauncer is
-    constant MAX_COUNT : interger := 1_000_000; -- Tempo que o circuito vai esperar até ter certeza que parou de trpidar
+    constant MAX_COUNT : interger := 1_000_000;                     -- Tempo que o circuito vai esperar até ter certeza que parou de trpidar
     signal sync : std_logic_vector (1 downto 0) := (others => '0'); -- Barramento de 2 bits, garante que o aperto seja lido ritmica, a placa altera rapidante energia entre 1 e 0, e essees dois FFs vai fazer a limpagem, (others => '0') essa parte garante que quando ligar a placa seja 00.
+    signal btn_stable : std_logic := '0';                           -- Linha de conexão entre componentes que inicializa em 1, ele limpa  efiltra o botão, passando a ser 1 qunado tem 100% de certeza que foi pressionado o btn
 
-
+ -- MAIS CÓDIGO POR VIRM
 
 
 
