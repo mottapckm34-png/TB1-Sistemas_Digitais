@@ -61,9 +61,108 @@ begin
 end process;
 
 
+
+
+-- =========================================================================
 -- FMS - CONTROLE DE MEMÓRIA  
+-- =========================================================================
 
+-- Entidade: Definindo as entradas e saídas ajustadas para a ULA
+entity fsm_controller is
+    port (
+        clk         : in  STD_LOGIC;                      -- Sinal de relógio (Clock)
+        rst         : in  STD_LOGIC;                      -- Botão de reset (agora Síncrono)
+        btn_pulse   : in  STD_LOGIC;                      -- Sinal do botão de "Enter"
+        switches    : in  STD_LOGIC_VECTOR(3 downto 0);   -- As 4 chaves seletoras da placa FPGA
 
+        out_op      : out STD_LOGIC_VECTOR(3 downto 0);   -- Saída da operação (4 bits)
+        out_a       : out STD_LOGIC_VECTOR(4 downto 0);   -- AJUSTADO: Saída A (5 bits para caber na ULA)
+        out_b       : out STD_LOGIC_VECTOR(4 downto 0);   -- AJUSTADO: Saída B (5 bits para caber na ULA)
+        state_out   : out STD_LOGIC_VECTOR(1 downto 0)    -- Otimizado para usar apenas 2 LEDs (00 a 11)
+    );
+end fsm_controller;
+
+-- Arquitetura: Comportamento interno da FSM
+architecture Behavioral of fsm_controller is
+
+    -- Os 4 estados possíveis da Máquina de Estados
+    type state_type is (S_WAIT_OP, S_WAIT_A, S_WAIT_B, S_COMPUTE);
+    signal current_state : state_type := S_WAIT_OP;
+
+    -- Registradores internos (memórias temporárias) com os tamanhos corretos
+    signal reg_op   : STD_LOGIC_VECTOR(3 downto 0) := (others => '0');
+    signal reg_a    : STD_LOGIC_VECTOR(4 downto 0) := (others => '0');
+    signal reg_b    : STD_LOGIC_VECTOR(4 downto 0) := (others => '0');
+
+begin
+
+    -- Processo Otimizado: Tudo acontece sincronizado com o Clock
+    process(clk)
+    begin
+        if rising_edge(clk) then
+            
+            -- Reset Síncrono (Mais seguro contra ruídos na placa)
+            if rst = '1' then
+                current_state <= S_WAIT_OP;
+                reg_op <= (others => '0');
+                reg_a  <= (others => '0');
+                reg_b  <= (others => '0');
+            
+            -- Lógica otimizada: O botão é checado apenas uma vez aqui fora
+            elsif btn_pulse = '1' then
+                
+                case current_state is
+
+                    -- ESTADO 1: Capturando a Operação
+                    when S_WAIT_OP =>
+                        -- TRAVA DE SEGURANÇA: Só avança se for 0000, 0001, 0010 ou 0011
+                        if switches = "0000" or switches = "0001" or switches = "0010" or switches = "0011" then
+                            reg_op <= switches;
+                            current_state <= S_WAIT_A;
+                        else
+                            current_state <= S_WAIT_OP; -- Operação inválida, fica no mesmo estado
+                        end if;
+
+                    -- ESTADO 2: Capturando o Operando A
+                    when S_WAIT_A =>
+                        -- Transforma os 4 bits da chave em 5 bits concatenando um '0'
+                        reg_a <= '0' & switches;
+                        current_state <= S_WAIT_B;
+
+                    -- ESTADO 3: Capturando o Operando B
+                    when S_WAIT_B =>
+                        -- Transforma os 4 bits da chave em 5 bits concatenando um '0'
+                        reg_b <= '0' & switches;
+                        current_state <= S_COMPUTE;
+
+                    -- ESTADO 4: Mostrando o Resultado
+                    when S_COMPUTE =>
+                        -- Como o botão foi apertado de novo, reinicia o ciclo
+                        current_state <= S_WAIT_OP;
+
+                    -- Proteção contra estados fantasmas
+                    when others =>
+                        current_state <= S_WAIT_OP;
+
+                end case;
+            end if;
+        end if;
+    end process;
+
+    -- Conectando as memórias aos pinos de saída
+    out_op <= reg_op;
+    out_a  <= reg_a;
+    out_b  <= reg_b;
+
+    -- Decodificador para os LEDs (2 LEDs são suficientes para 4 estados)
+    with current_state select
+        state_out <= "00" when S_WAIT_OP,
+                     "01" when S_WAIT_A,
+                     "10" when S_WAIT_B,
+                     "11" when S_COMPUTE,
+                     "00" when others;
+
+end Behavioral;
 
 
 
