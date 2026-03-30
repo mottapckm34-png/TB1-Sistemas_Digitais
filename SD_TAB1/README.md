@@ -34,3 +34,8 @@ ext_b        = Valor de B em forma binária de 5 vetores
 tempResult   = Valor temporário armazenado    
 
 -------------------------------------------------------
+
+
+DEBAUNCER : 
+
+Quando você aperta um botão mecânico, as lâminas metálicas internas quicam entre si por 5 a 20 ms antes de estabilizar. Para um humano isso é imperceptível — mas a FPGA rodando a 50 MHz vê cada quique como um aperto de botão separado. Sem debouncer, cada aperto de botão pode gerar 10, 20 ou 50 transições. A FSM transitaria de estado múltiplas vezes por um único clique — o projeto não funcionaria.
