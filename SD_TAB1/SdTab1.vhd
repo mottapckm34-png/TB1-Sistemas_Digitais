@@ -72,11 +72,23 @@ begin
 
 end process;
 
+-- OUTPUT
+
+--resultado de 4 bits vai receber o sinal
+result <= rest5 (3 downto 0);
+
+--FLAG DE 0 - quando o resultado for 0000, ou seja, todos os bits sao 0
+flag_z <= '1' when rest5 (3 downto 0) = "0000" else '0';
+
+-- FLAG DE NUMEROS NEGATIVOS - quando o resultado da operação tem como resultado numeros negativos e necessita do complemento de 2
+flag_n <=  rest5 (3);
+
+--FLAG DE CARRY - quando necessitar do carry (vai um), a sequencia é ativa nos leds
+
 
 -- FMS - CONTROLE DE MEMÓRIA  
 
 
 
-
-
 -- TOP_LEVEL PINAGE
+end Behavioral;
