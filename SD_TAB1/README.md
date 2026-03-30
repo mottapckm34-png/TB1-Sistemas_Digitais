@@ -21,7 +21,7 @@ flag_ov  = Flag OverFlow
 
 -------------------------------------------------------
 
-SIGNAL:
+SIGNAL: Conexão interna entre os componentes, não é saida nem entrada
 
 rest5 = Saida para ceceber Carry In, Carry Out EU ACHO 
 
@@ -34,7 +34,6 @@ ext_b        = Valor de B em forma binária de 5 vetores
 tempResult   = Valor temporário armazenado    
 
 -------------------------------------------------------
-
 
 DEBAUNCER : 
 
