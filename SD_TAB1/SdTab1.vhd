@@ -141,9 +141,17 @@ flag_z <= '1' when rest5 (3 downto 0) = "0000" else '0';
 flag_n <=  rest5 (3);
 
 --FLAG DE CARRY - quando necessitar do carry (vai um), a sequencia é ativa nos leds
+flag_c <= rest5 (4);
 
-
-
+-- FLAG DE OVERFLOW
+ -- ADD overflow
+ flag_ov <=
+        ((NOT (a(3) XOR b(3))) AND (a(3) XOR res5(3)))
+            when op = "000" else
+        -- SUB overflow
+        ((a(3) XOR b(3)) AND (a(3) XOR res5(3)))
+            when op = "001" else
+        '0'; -- Overflow undefined for logical/shift operations
 
 -- =========================================================================
 -- FMS - CONTROLE DE MEMÓRIA  
