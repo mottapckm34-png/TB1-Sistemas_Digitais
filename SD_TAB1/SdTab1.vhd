@@ -39,9 +39,9 @@ architecture Behavioral of debauncer is
 
 
 
-
+-- =========================================================================
 -- ULA - SELEÇÃO DE OPERAÇÃO ADIÇÃO, SUBTRAÇÃO, AND, OR, NOT, XOR, SHIFT L, SHIFT R
--- ULA - OPERATION SELECTION ADD, SUB, AND, OR, NOT, XOR, SHIFT_L, SHIFT_R
+-- =========================================================================
 
 entity ULA is
     port (
