@@ -206,6 +206,4 @@ begin
                      "00" when others;
 
 end Behavioral;
-
 -- TOP_LEVEL PINAGE
-end Behavioral;
