@@ -8,14 +8,32 @@ use IEEE.NUMERIC_STD.ALL;
 entity debauncer is
     port (
         -- INPUT
-        clk         : in STD_LOGIC;
-        rst         : in STD_LOGIC;
-        btn_in      : in STD_LOGIC;
+        clk         : in STD_LOGIC; -- Clock de 50 Mhz da placa, para saber qunado o botão "parou" de vibrar.
+        rst         : in STD_LOGIC; -- Botão de reset. Reinicia o código todo.
+        btn_in      : in STD_LOGIC; -- Botão de entrada de sinal
 
         --OUTPUT
-        btn_pulse   : out STD_LOGIC;
+        btn_pulse   : out STD_LOGIC; -- Saida de sinal para a placa, saida já limpa
     );
 end debauncer;
+
+architecture Behavioral of debauncer is
+    constant MAX_COUNT : interger := 1_000_000; -- Tempo que o circuito vai esperar até ter certeza que parou de trpidar
+    signal sync : std_logic_vector (1 downto 0) := (others => '0'); -- Barramento de 2 bits, garante que o aperto seja lido ritmica, a placa altera rapidante energia entre 1 e 0, e essees dois FFs vai fazer a limpagem, (others => '0') essa parte garante que quando ligar a placa seja 00.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
