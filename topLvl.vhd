@@ -1,152 +1,135 @@
 ------------------------------------------------------------------------
--- Module:      top_level.vhd
--- Description: Top-level entity for the 4-bit ALU system.
---              Instantiates and interconnects the debouncer,
---              FSM controller, and ALU modules.
---              Maps physical FPGA pins (switches, button, LEDs)
---              to internal module ports.
+-- Module:      alu_4bit.vhd
+-- Description: 4-bit Arithmetic and Logic Unit (combinational).
+--              Supports 8 operations selected by a 3-bit opcode
+--              (only bits 2 downto 0 of op_code are used).
+--              Generates 4 status flags: Zero, Negative, Carry, Overflow.
 --
--- Pin mapping for Xilinx Spartan 3 Starter Kit:
---   SW(3:0)   -> 4 slide switches (operation / operands)
---   BTN       -> Push-button for confirmation
---   LED(3:0)  -> ALU result (4 bits)
---   LED(4)    -> Zero flag
---   LED(5)    -> Negative flag
---   LED(6)    -> Carry flag
---   LED(7)    -> Overflow flag
+-- Operation Table:
+--   OpCode | Operation           | Description
+--   -------+---------------------+-----------------------------------
+--    000   | A + B               | Addition (two's complement)
+--    001   | A - B               | Subtraction (two's complement)
+--    010   | A AND B             | Bitwise AND
+--    011   | A OR  B             | Bitwise OR
+--    100   | A XOR B             | Bitwise XOR
+--    101   | NOT A               | Bitwise complement of A
+--    110   | SHL A (by 1)        | Shift left A by 1 position
+--    111   | SHR A (by 1)        | Shift right A by 1 position (arithmetic)
+--
+-- Flag definitions (active high):
+--   Zero     (Z) : Result equals "0000"
+--   Negative (N) : MSB of result is '1' (negative in two's complement)
+--   Carry    (C) : Carry out from addition/subtraction
+--   Overflow (V) : Signed overflow on addition/subtraction
 --
 -- Target: Xilinx Spartan 3
 ------------------------------------------------------------------------
 
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.NUMERIC_STD.ALL;
 
-entity top_level is
+entity alu_4bit is
     port (
-        clk      : in  STD_LOGIC;                        -- 50 MHz board clock
-        rst      : in  STD_LOGIC;                        -- Reset button (active high)
-        switches : in  STD_LOGIC_VECTOR(3 downto 0);     -- 4 slide switches
-        btn      : in  STD_LOGIC;                        -- Confirm push-button (active high)
-        leds     : out STD_LOGIC_VECTOR(7 downto 0)      -- 8 output LEDs
+        op_code   : in  STD_LOGIC_VECTOR(3 downto 0);  -- Operation selector (bits 2:0 used)
+        operand_a : in  STD_LOGIC_VECTOR(3 downto 0);  -- First operand
+        operand_b : in  STD_LOGIC_VECTOR(3 downto 0);  -- Second operand
+
+        result    : out STD_LOGIC_VECTOR(3 downto 0);  -- 4-bit result
+        flag_zero : out STD_LOGIC;                      -- Zero flag
+        flag_neg  : out STD_LOGIC;                      -- Negative flag
+        flag_carry: out STD_LOGIC;                      -- Carry out flag
+        flag_ovf  : out STD_LOGIC                       -- Overflow flag
     );
-end top_level;
+end alu_4bit;
 
-architecture Structural of top_level is
+architecture Behavioral of alu_4bit is
 
-    -- Component declarations
-    component debouncer is
-        generic (
-            DEBOUNCE_LIMIT : integer := 500000
-        );
-        port (
-            clk       : in  STD_LOGIC;
-            rst       : in  STD_LOGIC;
-            btn_in    : in  STD_LOGIC;
-            btn_pulse : out STD_LOGIC
-        );
-    end component;
+    -- Internal signals for computation
+    signal sel          : STD_LOGIC_VECTOR(2 downto 0);
+    signal res_internal : STD_LOGIC_VECTOR(3 downto 0);
+    signal carry_int    : STD_LOGIC;
+    signal ovf_int      : STD_LOGIC;
 
-    component fsm_controller is
-        port (
-            clk       : in  STD_LOGIC;
-            rst       : in  STD_LOGIC;
-            btn_pulse : in  STD_LOGIC;
-            switches  : in  STD_LOGIC_VECTOR(3 downto 0);
-            op_code   : out STD_LOGIC_VECTOR(3 downto 0);
-            operand_a : out STD_LOGIC_VECTOR(3 downto 0);
-            operand_b : out STD_LOGIC_VECTOR(3 downto 0);
-            alu_enable: out STD_LOGIC;
-            state_out : out STD_LOGIC_VECTOR(2 downto 0)
-        );
-    end component;
-
-    component alu_4bit is
-        port (
-            op_code   : in  STD_LOGIC_VECTOR(3 downto 0);
-            operand_a : in  STD_LOGIC_VECTOR(3 downto 0);
-            operand_b : in  STD_LOGIC_VECTOR(3 downto 0);
-            result    : out STD_LOGIC_VECTOR(3 downto 0);
-            flag_zero : out STD_LOGIC;
-            flag_neg  : out STD_LOGIC;
-            flag_carry: out STD_LOGIC;
-            flag_ovf  : out STD_LOGIC
-        );
-    end component;
-
-    -- Internal wires
-    signal w_btn_pulse  : STD_LOGIC;
-    signal w_op_code    : STD_LOGIC_VECTOR(3 downto 0);
-    signal w_operand_a  : STD_LOGIC_VECTOR(3 downto 0);
-    signal w_operand_b  : STD_LOGIC_VECTOR(3 downto 0);
-    signal w_alu_enable : STD_LOGIC;
-    signal w_state      : STD_LOGIC_VECTOR(2 downto 0);
-
-    signal w_result     : STD_LOGIC_VECTOR(3 downto 0);
-    signal w_flag_zero  : STD_LOGIC;
-    signal w_flag_neg   : STD_LOGIC;
-    signal w_flag_carry : STD_LOGIC;
-    signal w_flag_ovf   : STD_LOGIC;
+    -- Extended 5-bit signals for carry detection
+    signal ext_a        : UNSIGNED(4 downto 0);
+    signal ext_b        : UNSIGNED(4 downto 0);
+    signal ext_sum      : UNSIGNED(4 downto 0);
 
 begin
 
-    -- Debouncer instance: filters raw button input
-    U_DEBOUNCE: debouncer
-        generic map (
-            DEBOUNCE_LIMIT => 500000   -- ~10 ms at 50 MHz
-        )
-        port map (
-            clk       => clk,
-            rst       => rst,
-            btn_in    => btn,
-            btn_pulse => w_btn_pulse
-        );
+    sel <= op_code(2 downto 0);
 
-    -- FSM Controller instance: manages input capture sequence
-    U_FSM: fsm_controller
-        port map (
-            clk       => clk,
-            rst       => rst,
-            btn_pulse => w_btn_pulse,
-            switches  => switches,
-            op_code   => w_op_code,
-            operand_a => w_operand_a,
-            operand_b => w_operand_b,
-            alu_enable=> w_alu_enable,
-            state_out => w_state
-        );
+    -- Extend operands to 5 bits for unsigned carry computation
+    ext_a <= '0' & UNSIGNED(operand_a);
+    ext_b <= '0' & UNSIGNED(operand_b);
 
-    -- ALU instance: combinational computation
-    U_ALU: alu_4bit
-        port map (
-            op_code   => w_op_code,
-            operand_a => w_operand_a,
-            operand_b => w_operand_b,
-            result    => w_result,
-            flag_zero => w_flag_zero,
-            flag_neg  => w_flag_neg,
-            flag_carry=> w_flag_carry,
-            flag_ovf  => w_flag_ovf
-        );
-
-    -- LED output multiplexing:
-    -- When ALU result is active (S_SHOW_RESULT), display result and flags.
-    -- Otherwise, display the current FSM state on lower LEDs for user feedback.
-    process(w_alu_enable, w_result, w_flag_zero, w_flag_neg,
-            w_flag_carry, w_flag_ovf, w_state)
+    -- Main ALU combinational logic
+    process(sel, operand_a, operand_b, ext_a, ext_b, ext_sum)
     begin
-        if w_alu_enable = '1' then
-            -- Result mode: LEDs show result (3:0) and flags (7:4)
-            leds(3 downto 0) <= w_result;
-            leds(4)          <= w_flag_zero;
-            leds(5)          <= w_flag_neg;
-            leds(6)          <= w_flag_carry;
-            leds(7)          <= w_flag_ovf;
-        else
-            -- Input mode: show current state on lower LEDs, upper LEDs off
-            leds(2 downto 0) <= w_state;
-            leds(3)          <= '0';
-            leds(7 downto 4) <= (others => '0');
-        end if;
+        -- Default values
+        res_internal <= (others => '0');
+        carry_int    <= '0';
+        ovf_int      <= '0';
+
+        case sel is
+
+            -- 000: Addition (A + B)
+            when "000" =>
+                ext_sum      <= ext_a + ext_b;
+                res_internal <= STD_LOGIC_VECTOR(ext_sum(3 downto 0));
+                carry_int    <= STD_LOGIC(ext_sum(4));
+                -- Signed overflow: both operands same sign, result different sign
+                ovf_int <= (not operand_a(3) and not operand_b(3) and STD_LOGIC(ext_sum(3)))
+                        or (operand_a(3) and operand_b(3) and not STD_LOGIC(ext_sum(3)));
+
+            -- 001: Subtraction (A - B) via A + (~B) + 1
+            when "001" =>
+                ext_sum      <= ext_a + (not ext_b) + 1;
+                res_internal <= STD_LOGIC_VECTOR(ext_sum(3 downto 0));
+                carry_int    <= STD_LOGIC(ext_sum(4));  -- Borrow (inverted carry)
+                -- Signed overflow: A positive, B negative (or vice-versa) and result sign wrong
+                ovf_int <= (not operand_a(3) and operand_b(3) and STD_LOGIC(ext_sum(3)))
+                        or (operand_a(3) and not operand_b(3) and not STD_LOGIC(ext_sum(3)));
+
+            -- 010: Bitwise AND
+            when "010" =>
+                res_internal <= operand_a and operand_b;
+
+            -- 011: Bitwise OR
+            when "011" =>
+                res_internal <= operand_a or operand_b;
+
+            -- 100: Bitwise XOR
+            when "100" =>
+                res_internal <= operand_a xor operand_b;
+
+            -- 101: Bitwise NOT (complement of A)
+            when "101" =>
+                res_internal <= not operand_a;
+
+            -- 110: Shift Left Logical by 1 (A << 1)
+            when "110" =>
+                res_internal <= operand_a(2 downto 0) & '0';
+                carry_int    <= operand_a(3);  -- Bit shifted out goes to carry
+
+            -- 111: Shift Right Arithmetic by 1 (A >> 1, preserving sign)
+            when "111" =>
+                res_internal <= operand_a(3) & operand_a(3 downto 1);
+                carry_int    <= operand_a(0);  -- Bit shifted out goes to carry
+
+            when others =>
+                res_internal <= (others => '0');
+
+        end case;
     end process;
 
-end Structural;
+    -- Output assignments
+    result     <= res_internal;
+    flag_zero  <= '1' when res_internal = "0000" else '0';
+    flag_neg   <= res_internal(3);
+    flag_carry <= carry_int;
+    flag_ovf   <= ovf_int;
+
+end Behavioral;
