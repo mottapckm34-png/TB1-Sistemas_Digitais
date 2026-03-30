@@ -1,11 +1,21 @@
 library IEEE;
 
 use IEEE.STD_LOGIC.1164.ALL;
-USE IEEE.NUMERIC_STD.ALL;
+use IEEE.NUMERIC_STD.ALL;
 
 -- DEBAUNCER
 
+entity debauncer is
+    port (
+        -- INPUT
+        clk         : in STD_LOGIC;
+        rst         : in STD_LOGIC;
+        btn_in      : in STD_LOGIC;
 
+        --OUTPUT
+        btn_pulse   : out STD_LOGIC;
+    );
+end debauncer;
 
 
 
@@ -15,12 +25,12 @@ USE IEEE.NUMERIC_STD.ALL;
 entity ULA is
     port (
         -- ENTRADAS / INPUT
-        op        :  in STD_LOGIC_VECTOR (3 downto 0); -- OPERATION SELECTION 3 BIT, 000, 001, 010, 011, 100, 101, 110 ,111
-        a         :  in STD_LOGIC_VECTOR (4 downto 0); -- NUMBER IN BINARY
-        b         :  in STD_LOGIC_VECTOR (4 downto 0); -- NUMBER IN BINARY
+        op        :  in STD_LOGIC_VECTOR (2 downto 0); -- OPERATION SELECTION 3 BIT, 000, 001, 010, 011, 100, 101, 110 ,111
+        a         :  in STD_LOGIC_VECTOR (3 downto 0); -- NUMBER IN BINARY
+        b         :  in STD_LOGIC_VECTOR (3 downto 0); -- NUMBER IN BINARY
 
-        -- SAIDAS / OUTOUT
-        result    :  out STD_LOGIC_VECTOR (4 downto 0); -- RESULT NUMBER IN BINARY
+        -- SAIDAS / OUTPUT
+        result    :  out STD_LOGIC_VECTOR (3 downto 0); -- RESULT NUMBER IN BINARY
         flag_z    :  out std_logic; -- FLAG RESULT NUMBER 0
         flag_n    :  out std_logic; -- FLAG RESULT NUMBER NEGATIV
         flag_c    :  out std_logic; -- FLAG CARRY OUT
@@ -53,6 +63,8 @@ begin
 
         -- OR, '0' & Faz a concatenação obrigando a ter 5 bits, (unsigned(a) AND unsigned(b)) compara bit a bit, bit 0 de A com o bit 0 de B
         when "011" => tempResult := '0' & (unsigned(a) OR unsigned(b));
+
+        -- CONTIAR AS OUTRAS OPERAÇÕES
 
     end case;
 
