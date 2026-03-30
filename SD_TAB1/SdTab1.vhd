@@ -23,24 +23,63 @@ architecture Behavioral of debauncer is
     constant MAX_COUNT : interger := 1_000_000;                     -- Tempo que o circuito vai esperar até ter certeza que parou de trpidar
     signal sync : std_logic_vector (1 downto 0) := (others => '0'); -- Barramento de 2 bits, garante que o aperto seja lido ritmica, a placa altera rapidante energia entre 1 e 0, e essees dois FFs vai fazer a limpagem, (others => '0') essa parte garante que quando ligar a placa seja 00.
     signal btn_stable : std_logic := '0';                           -- Linha de conexão entre componentes que inicializa em 1, ele limpa  efiltra o botão, passando a ser 1 qunado tem 100% de certeza que foi pressionado o btn
+    signal count : integer range 0 to MAX_COUNT := 0;               -- Contador para medir o tempo de estabilidade do botão
+    signal btn_prev : std_logic := '0';                             -- Armazena o estado anterior do botão para detectar mudanças
 
- -- MAIS CÓDIGO POR VIRM
+    begin
+
+ -- Stage 1: Two-flip-flop synchronizer
+    process(clk, rst)
+    begin
+        if rst = '1' then
+            sync <= (others => '0'); -- Reset dos flip-flops
+        elsif rising_edge(clk) then
+            sync(0) <= btn_in;       -- Primeiro flip-flop captura o sinal do botão
+            sync(1) <= sync(0);     -- Segundo flip-flop sincroniza o sinal ao clock
+        end if;
+    end process;
+
+ -- Stage 2: Stability counter
+    process(clk, rst)
+    begin
+        if rst = '1' then
+            count <= 0;             -- Reset do contador
+            btn_stable <= '0';      -- Reset do sinal de estabilidade
+            btn_prev <= '0';        -- Reset do estado anterior do botão
+        elsif rising_edge(clk) then
+            if sync(1) /= btn_prev then -- Detecta mudança no sinal do botão
+                count <= 0;             -- Reinicia o contador se houver mudança
+                btn_stable <= '0';      -- Sinal de estabilidade é desativado
+                btn_prev <= sync(1);    -- Atualiza o estado anterior do botão
+            else
+                if count < MAX_COUNT then
+                    count <= count + 1; -- Incrementa o contador se o sinal for estável
+                else
+                    btn_stable <= '1';  -- Ativa o sinal de estabilidade após tempo suficiente
+                end if;
+            end if;
+        end if;
+    end process;
+
+ -- Stage 3: Rising-edge pulse generator
+    process(clk, rst)
+    begin
+        if rst = '1' then
+            btn_pulse <= '0';       -- Reset do pulso de saída
+        elsif rising_edge(clk) then
+            if btn_stable = '1' and sync(1) = '1' then -- Gera pulso quando o botão é estável e pressionado
+                btn_pulse <= '1';
+            else
+                btn_pulse <= '0';   -- Caso contrário, mantém o pulso baixo
+            end if;
+        end if;
+    end process;
 
 
-
-
-
-
-
-
-
-
-
-
-
+ 
 
 -- =========================================================================
--- ULA - SELEÇÃO DE OPERAÇÃO ADIÇÃO, SUBTRAÇÃO, AND, OR, NOT, XOR, SHIFT L, SHIFT R
+-- ULA - SELEÇÃO DE OPERAÇÃO ADIÇÃO, SUBTRAÇÃO, AND, OR, NOT, XOR, SHIFT L, SHIFT R "main" DO PROJETO
 -- =========================================================================
 
 entity ULA is
@@ -113,94 +152,73 @@ flag_n <=  rest5 (3);
 -- FMS - CONTROLE DE MEMÓRIA  
 -- =========================================================================
 
--- Entidade: Definindo as entradas e saídas ajustadas para a ULA
 entity fsm_controller is
     port (
-        clk         : in  STD_LOGIC;                      -- Sinal de relógio (Clock)
-        rst         : in  STD_LOGIC;                      -- Botão de reset (agora Síncrono)
-        btn_pulse   : in  STD_LOGIC;                      -- Sinal do botão de "Enter"
+        clk         : in  STD_LOGIC;
+        rst         : in  STD_LOGIC;
+        btn_pulse   : in  STD_LOGIC;                      -- Sinal do botão de "Enter" (debounced)
         switches    : in  STD_LOGIC_VECTOR(3 downto 0);   -- As 4 chaves seletoras da placa FPGA
 
-        out_op      : out STD_LOGIC_VECTOR(3 downto 0);   -- Saída da operação (4 bits)
-        out_a       : out STD_LOGIC_VECTOR(4 downto 0);   -- AJUSTADO: Saída A (5 bits para caber na ULA)
-        out_b       : out STD_LOGIC_VECTOR(4 downto 0);   -- AJUSTADO: Saída B (5 bits para caber na ULA)
-        state_out   : out STD_LOGIC_VECTOR(1 downto 0)    -- Otimizado para usar apenas 2 LEDs (00 a 11)
+        out_op      : out STD_LOGIC_VECTOR(2 downto 0);   -- Saída da operação (3 bits para a ULA)
+        out_a       : out STD_LOGIC_VECTOR(3 downto 0);   -- Saída A (4 bits para a ULA)
+        out_b       : out STD_LOGIC_VECTOR(3 downto 0);   -- Saída B (4 bits para a ULA)
+        state_out   : out STD_LOGIC_VECTOR(1 downto 0)    -- Saída para LEDs indicando o estado atual
     );
 end fsm_controller;
 
--- Arquitetura: Comportamento interno da FSM
 architecture Behavioral of fsm_controller is
 
-    -- Os 4 estados possíveis da Máquina de Estados
     type state_type is (S_WAIT_OP, S_WAIT_A, S_WAIT_B, S_COMPUTE);
     signal current_state : state_type := S_WAIT_OP;
 
-    -- Registradores internos (memórias temporárias) com os tamanhos corretos
-    signal reg_op   : STD_LOGIC_VECTOR(3 downto 0) := (others => '0');
-    signal reg_a    : STD_LOGIC_VECTOR(4 downto 0) := (others => '0');
-    signal reg_b    : STD_LOGIC_VECTOR(4 downto 0) := (others => '0');
-
+    signal reg_op   : STD_LOGIC_VECTOR(2 downto 0) := (others => '0'); -- Registrador para a operação
+    signal reg_a    : STD_LOGIC_VECTOR(3 downto 0) := (others => '0'); -- Registrador para o operando A
+    signal reg_b    : STD_LOGIC_VECTOR(3 downto 0) := (others => '0'); -- Registrador para o operando B
 begin
 
-    -- Processo Otimizado: Tudo acontece sincronizado com o Clock
     process(clk)
     begin
         if rising_edge(clk) then
-            
-            -- Reset Síncrono (Mais seguro contra ruídos na placa)
             if rst = '1' then
                 current_state <= S_WAIT_OP;
                 reg_op <= (others => '0');
                 reg_a  <= (others => '0');
                 reg_b  <= (others => '0');
-            
-            -- Lógica otimizada: O botão é checado apenas uma vez aqui fora
-            elsif btn_pulse = '1' then
-                
+            elsif btn_pulse = '1' then -- Transição de estado ocorre no pulso do botão
                 case current_state is
-
-                    -- ESTADO 1: Capturando a Operação
                     when S_WAIT_OP =>
-                        -- TRAVA DE SEGURANÇA: Só avança se for 0000, 0001, 0010 ou 0011
-                        if switches = "0000" or switches = "0001" or switches = "0010" or switches = "0011" then
-                            reg_op <= switches;
+                        -- TRAVA DE SEGURANÇA: Só avança se for 000, 001, 010 ou 011
+                        if switches(2 downto 0) = "000" or switches(2 downto 0) = "001" or switches(2 downto 0) = "010" or switches(2 downto 0) = "011" then
+                            reg_op <= switches(2 downto 0); -- Captura os 3 bits menos significativos para a operação
                             current_state <= S_WAIT_A;
                         else
                             current_state <= S_WAIT_OP; -- Operação inválida, fica no mesmo estado
                         end if;
 
-                    -- ESTADO 2: Capturando o Operando A
                     when S_WAIT_A =>
-                        -- Transforma os 4 bits da chave em 5 bits concatenando um '0'
-                        reg_a <= '0' & switches;
+                        reg_a <= switches; -- Captura os 4 bits das chaves para o operando A
                         current_state <= S_WAIT_B;
 
-                    -- ESTADO 3: Capturando o Operando B
                     when S_WAIT_B =>
-                        -- Transforma os 4 bits da chave em 5 bits concatenando um '0'
-                        reg_b <= '0' & switches;
+                        reg_b <= switches; -- Captura os 4 bits das chaves para o operando B
                         current_state <= S_COMPUTE;
 
-                    -- ESTADO 4: Mostrando o Resultado
                     when S_COMPUTE =>
-                        -- Como o botão foi apertado de novo, reinicia o ciclo
-                        current_state <= S_WAIT_OP;
+                        current_state <= S_WAIT_OP; -- Após exibir o resultado, retorna para aguardar nova operação
 
-                    -- Proteção contra estados fantasmas
                     when others =>
-                        current_state <= S_WAIT_OP;
-
+                        current_state <= S_WAIT_OP; -- Proteção contra estados inválidos
                 end case;
             end if;
         end if;
     end process;
 
-    -- Conectando as memórias aos pinos de saída
+    -- Conecta os registradores internos às saídas
     out_op <= reg_op;
     out_a  <= reg_a;
     out_b  <= reg_b;
 
-    -- Decodificador para os LEDs (2 LEDs são suficientes para 4 estados)
+    -- Decodificador para os LEDs de estado
     with current_state select
         state_out <= "00" when S_WAIT_OP,
                      "01" when S_WAIT_A,

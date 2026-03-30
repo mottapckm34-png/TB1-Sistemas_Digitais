@@ -41,7 +41,6 @@ Quando você aperta um botão mecânico, as lâminas metálicas internas quicam 
 
 ---------------------------------------------------------
 
-
 # Controlador FSM para ULA (Máquina de Estados Finita)
 
 Este módulo (`fsm_controller.vhd`) implementa um controlador sequencial desenvolvido em VHDL. O objetivo principal deste circuito é atuar como uma interface de entrada para uma Unidade Lógica Aritmética (ULA), utilizando o conceito de **multiplexação no tempo**. 
@@ -85,4 +84,3 @@ O controlador avança entre os estados sempre que recebe um pulso limpo de 1 cic
 ## 🛠️ Tecnologias e Target
 * **Linguagem:** VHDL (IEEE.STD_LOGIC_1164)
 * **Target recomendado:** FPGAs da família Xilinx Spartan-3 (ou similares).
-
