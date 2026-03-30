@@ -3,7 +3,7 @@ Trabalho de Sistemas Digitais onde esta sendo criada uma ula de 4 bits que reali
 
 -------------------------------------------------------
 
-INPUT:
+## INPUT:
 
 op = Seletor de operaç~eso
 a  = Valor de A
@@ -11,7 +11,7 @@ b  = Valor de B
 
 -------------------------------------------------------
 
-OUTPUT:
+## OUTPUT:
 
 result   = Resultado final
 flag_z   = Flah para valor 0
@@ -21,13 +21,13 @@ flag_ov  = Flag OverFlow
 
 -------------------------------------------------------
 
-SIGNAL: Conexão interna entre os componentes, não é saida nem entrada
+## SIGNAL: Conexão interna entre os componentes, não é saida nem entrada
 
 rest5 = Saida para ceceber Carry In, Carry Out EU ACHO 
 
 -------------------------------------------------------
 
-VARIÁVEL
+## VARIÁVEL
 
 ext_a        = Valor de A em forma binária de 5 vetores 
 ext_b        = Valor de B em forma binária de 5 vetores 
@@ -35,7 +35,7 @@ tempResult   = Valor temporário armazenado
 
 -------------------------------------------------------
 
-DEBAUNCER : 
+## DEBAUNCER : 
 
 Quando você aperta um botão mecânico, as lâminas metálicas internas quicam entre si por 5 a 20 ms antes de estabilizar. Para um humano isso é imperceptível — mas a FPGA rodando a 50 MHz vê cada quique como um aperto de botão separado. Sem debouncer, cada aperto de botão pode gerar 10, 20 ou 50 transições. A FSM transitaria de estado múltiplas vezes por um único clique — o projeto não funcionaria.
 
@@ -84,3 +84,12 @@ O controlador avança entre os estados sempre que recebe um pulso limpo de 1 cic
 ## 🛠️ Tecnologias e Target
 * **Linguagem:** VHDL (IEEE.STD_LOGIC_1164)
 * **Target recomendado:** FPGAs da família Xilinx Spartan-3 (ou similares).
+
+## TOP_LEVEL
+
+É o único módulo que a FPGA "vê" de fora. Ele não calcula nada — sua única função é:
+
+1. Declarar as portas físicas da placa (switches, botões, LEDs)
+2. Instanciar os três módulos internos
+3. Conectar os sinais entre eles com port map
+4. Mapear as saídas da ALU nos LEDs físicos
