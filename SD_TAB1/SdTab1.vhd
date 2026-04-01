@@ -1,6 +1,6 @@
 library IEEE;
 
-use IEEE.STD_LOGIC.1164.ALL;
+use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
 
 -- =========================================================================
@@ -15,18 +15,19 @@ entity debauncer is
         btn_in      : in STD_LOGIC; -- Botão de entrada de sinal
 
         --OUTPUT
-        btn_pulse   : out STD_LOGIC; -- Saida de sinal para a placa, saida já limpa
+        btn_pulse   : out STD_LOGIC -- Saida de sinal para a placa, saida já limpa
     );
 end debauncer;
 
 architecture Behavioral of debauncer is
-    constant MAX_COUNT : interger := 1_000_000;                     -- Tempo que o circuito vai esperar até ter certeza que parou de trpidar
+    constant MAX_COUNT : integer := 1_000_000;                     -- Tempo que o circuito vai esperar até ter certeza que parou de trpidar
     signal sync : std_logic_vector (1 downto 0) := (others => '0'); -- Barramento de 2 bits, garante que o aperto seja lido ritmica, a placa altera rapidante energia entre 1 e 0, e essees dois FFs vai fazer a limpagem, (others => '0') essa parte garante que quando ligar a placa seja 00.
     signal btn_stable : std_logic := '0';                           -- Linha de conexão entre componentes que inicializa em 1, ele limpa  efiltra o botão, passando a ser 1 qunado tem 100% de certeza que foi pressionado o btn
     signal count : integer range 0 to MAX_COUNT := 0;               -- Contador para medir o tempo de estabilidade do botão
     signal btn_prev : std_logic := '0';                             -- Armazena o estado anterior do botão para detectar mudanças
 
-    begin
+    
+	 begin
 
  -- Stage 1: Two-flip-flop synchronizer
     process(clk, rst)
@@ -60,6 +61,23 @@ architecture Behavioral of debauncer is
             end if;
         end if;
     end process;
+
+ -- Stage 3: Rising-edge pulse generator
+    process(clk, rst)
+    begin
+        if rst = '1' then
+            btn_pulse <= '0';       -- Reset do pulso de saída
+        elsif rising_edge(clk) then
+            if btn_stable = '1' and sync(1) = '1' then -- Gera pulso quando o botão é estável e pressionado
+                btn_pulse <= '1';
+            else
+                btn_pulse <= '0';   -- Caso contrário, mantém o pulso baixo
+            end if;
+        end if;
+		  
+    end process;
+	 
+end Behavioral;
 
  -- Stage 3: Rising-edge pulse generator
     process(clk, rst)
