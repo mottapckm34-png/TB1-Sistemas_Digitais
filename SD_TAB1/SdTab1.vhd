@@ -251,84 +251,11 @@ entity top_level is
         rst         : in  STD_LOGIC;
         btn_in      : in  STD_LOGIC;
         switches    : in  STD_LOGIC_VECTOR(3 downto 0);
-
-        result      : out STD_LOGIC_VECTOR(3 downto 0);
-        flag_z      : out std_logic;
-        flag_n      : out std_logic;
-        flag_c      : out std_logic;
-        flag_ov     : out std_logic;
-        state_out   : out STD_LOGIC_VECTOR(1 downto 0)
+        led         : out STD_LOGIC_VECTOR(7 downto 0)
     );
 end top_level;
 
 architecture Structural of top_level is
-
-   
---Componentes
---    component debauncer is
---        port (
---           clk         : in STD_LOGIC;
---            rst         : in STD_LOGIC;
---            btn_in      : in STD_LOGIC;
---            btn_pulse   : out STD_LOGIC
---        );
---    end component;
---
---    component ULA is
---        port (
---            op        :  in STD_LOGIC_VECTOR (2 downto 0);
---            a         :  in STD_LOGIC_VECTOR (3 downto 0);
---            b         :  in STD_LOGIC_VECTOR (3 downto 0);
---            result    :  out STD_LOGIC_VECTOR (4 downto 0);
---            flag_z    :  out std_logic;
---            flag_n    :  out std_logic;
---            flag_c    :  out std_logic;
---            flag_ov   :  out std_logic
---        );
---    end component;
---
---    component fsm_controller is
---        port (
---            clk         : in  STD_LOGIC;
---            rst         : in  STD_LOGIC;
---            btn_pulse   : in  STD_LOGIC;
---            switches    : in  STD_LOGIC_VECTOR(3 downto 0);
---            out_op      : out STD_LOGIC_VECTOR(2 downto 0);
---            out_a       : out STD_LOGIC_VECTOR(3 downto 0);
---            out_b       : out STD_LOGIC_VECTOR(3 downto 0);
---            state_out   : out STD_LOGIC_VECTOR(1 downto 0)
---        );
---    end component;
---
---
---    --Componentes
---
---componentes fsm_controller is
---    port (
---        clk         : in  STD_LOGIC;
---        rst         : in  STD_LOGIC;
---        btn_pulse   : in  STD_LOGIC;
---        switches    : in  STD_LOGIC_VECTOR(3 downto 0);
---        out_op      : out STD_LOGIC_VECTOR(2 downto 0);
---        out_a       : out STD_LOGIC_VECTOR(3 downto 0);
---        out_b       : out STD_LOGIC_VECTOR(3 downto 0);
---        state_out   : out STD_LOGIC_VECTOR(1 downto 0)
---    );
---end component;
---
---component alu_4bit is
---    port (
---        op        :  in STD_LOGIC_VECTOR (2 downto 0);
---        a         :  in STD_LOGIC_VECTOR (3 downto 0);
---        b         :  in STD_LOGIC_VECTOR (3 downto 0);
---        result    :  out STD_LOGIC_VECTOR (4 downto 0);
---        flag_z    :  out std_logic;
---        flag_n    :  out std_logic;
---        flag_c    :  out std_logic;
---        flag_ov   :  out std_logic
---    );
---end component;
-
 --Internal wires
 
 signal w_btn_pulse : STD_LOGIC;
@@ -336,7 +263,6 @@ signal w_op_code : STD_LOGIC_VECTOR(2 downto 0);
 signal w_operando_a : STD_LOGIC_VECTOR(3 downto 0);
 signal w_operando_b : STD_LOGIC_VECTOR(3 downto 0);
 signal w_state_out : STD_LOGIC_VECTOR(1 downto 0);
-
 signal w_result : STD_LOGIC_VECTOR(3 downto 0);
 signal w_flag_zero : std_logic;
 signal w_flag_neg : std_logic;
@@ -383,27 +309,22 @@ begin
     );
 
 -- LED Outputs multiplexing
--- Whwn ALU result is active (S_SHOW_RESULT), display result and flags, otherwise show state
--- Otherwise, display the current state on the LEDs
-    process(w_state, w_result, w_flag_zero, w_flag_neg, w_flag_carry, w_flag_ovf)
-
+    p_led_mux : process(w_state_out, w_result,
+                        w_flag_zero, w_flag_neg, w_flag_carry, w_flag_ovf)
     begin
-
-
-        if w_alu_enable = '1' then
-            leds(3 downto 0) <= w_result; -- Display ALU result on LEDs
-
-            leds(4) <= w_flag_zero; -- Display zero flag on LED 4
-            leds(5) <= w_flag_neg;  -- Display negative flag on LED 5  
-            leds(6) <= w_flag_carry; -- Display carry flag on LED 6
-            leds(7) <= w_flag_ovf;  -- Display overflow flag on LED 7
+        if w_state_out = "11" then
+            -- Modo RESULTADO (S_COMPUTE): exibe resultado e flags
+            led(3 downto 0) <= w_result;      -- bits do resultado
+            led(4)          <= w_flag_zero;   -- flag Zero
+            led(5)          <= w_flag_neg;    -- flag Negativo
+            led(6)          <= w_flag_carry;  -- flag Carry
+            led(7)          <= w_flag_ovf;    -- flag Overflow
         else
-
-            --Imput mode: show current state on LEDs, upper LEDs off
-            leds(3 downto 0) <= w_state_out; -- Display current state
-            leds(3) <= '0'; -- Turn off upper LEDs
-            leds(7 downto 4) <= (others => '0'); -- Turn off upper LEDs
+            -- Modo ENTRADA: exibe estado atual nos 2 LEDs inferiores
+            -- w_state_out = "00" aguardando op | "01" aguardando A | "10" aguardando B
+            led(1 downto 0) <= w_state_out;   -- estado nos LEDs 0 e 1
+            led(7 downto 2) <= (others => '0'); -- demais LEDs apagados
         end if;
-    end process;
+    end process p_led_mux;
 
 end Structural;
