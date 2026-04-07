@@ -34,7 +34,7 @@ architecture Behavioral of debauncer is
         if rising_edge(clk) then
             if rst = '1' then
                 sync <= (others => '0'); -- Reset dos flip-flops
-            elsif rising_edge(clk) then
+            else
                 sync(0) <= btn_in;       -- Primeiro flip-flop captura o sinal do botão
                 sync(1) <= sync(0);     -- Segundo flip-flop sincroniza o sinal ao clock
             end if;
@@ -94,7 +94,8 @@ entity ULA is
         flag_z    :  out std_logic; -- FLAG RESULT NUMBER 0
         flag_n    :  out std_logic; -- FLAG RESULT NUMBER NEGATIV
         flag_c    :  out std_logic; -- FLAG CARRY OUT
-        flag_ov   :  out std_logic; -- FLAG OVERFLOW
+        flag_ov   :  out std_logic -- FLAG OVERFLOW
+    );
 end ULA;
 
 architecture Behavioral of ULA is
@@ -110,7 +111,7 @@ begin
     begin
         ext_a      := unsigned ('0' & a);       -- Concatenarion, places a '0' in front of every bit
         ext_b      := unsigned ('0' & b);       -- Concatenarion, places a '0' in front of every bit
-        tempResult := unsigned (others => '0'); -- Take note of the result before send to the LEDS, "(others => '0')" this part will turn every bit in 0. This part of the code serves to avoid unwanted memory, trash;
+        tempResult := (others => '0');          -- Take note of the result before send to the LEDS, "(others => '0')" this part will turn every bit in 0. This part of the code serves to avoid unwanted memory, trash;
 
         case op is
 
@@ -126,7 +127,24 @@ begin
             -- OR, '0' & Faz a concatenação obrigando a ter 5 bits, (unsigned(a) AND unsigned(b)) compara bit a bit, bit 0 de A com o bit 0 de B
             when "011" => tempResult := '0' & (unsigned(a) OR unsigned(b));
 
-            -- CONTIAR AS OUTRAS OPERAÇÕES
+            -- CONTIAR AS OUTRAS OPERAÇÕES -----------------------------
+            -- SÓ PRA FUNFAR -------------------------------------------
+
+            -- XOR: bit a bit
+            when "100" => tempResult := '0' & (unsigned(a) xor unsigned(b));
+ 
+            -- NOT: complemento de A (B ignorado)
+            when "101" => tempResult := '0' & (not unsigned(a));
+ 
+            -- SHL: deslocamento a esquerda — MSB vai para carry (bit 4)
+            when "110" =>
+                tempResult(4) := a(3);
+                tempResult(3 downto 0) := unsigned(a(2 downto 0) & '0');
+ 
+            -- SHR: deslocamento a direita — LSB vai para carry (bit 4)
+            when others =>
+                tempResult(4) := a(0);
+                tempResult(3 downto 0) := unsigned('0' & a(3 downto 1));
 
         end case;
 
