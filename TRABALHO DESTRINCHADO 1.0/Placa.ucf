@@ -1,0 +1,55 @@
+#-- ## Purpose : User Constraints File — maps top_level ports to Spartan-3 Starter
+
+#-- =========================================================================
+#-- CLOCK
+#-- =========================================================================
+
+NET "clk" LOC = "E12" | IOSTANDARD = LVCMOS33;                               #-- TRILHA DO CLOCK CONFIGURADO            
+
+#-- =========================================================================
+#-- RESRT (BTN_EAST)
+#-- =========================================================================
+
+NET "rst" LOC = "T16" | IOSTANDARD = LVCMOS33 | PULLDOWN ;                   #-- BOTÃO DE RESET           
+
+#-- =========================================================================
+#-- CONFIRMATION BUTTON (BTN_WEST)
+#-- =========================================================================
+
+NET "btn_in" LOC = "U15" | IOSTANDARD = LVCMOS33 | PULLDOWN ;                #-- BOTÃO DE CONFIRMAÇÃO              
+
+#-- =========================================================================
+#-- SWITCH
+#-- =========================================================================
+
+NET "switches<3>" LOC = "T9" | IOSTANDARD = LVCMOS33 ;                       #-- SIWTCH DO BIT MSB            
+NET "switches<2>" LOC = "U8" | IOSTANDARD = LVCMOS33 ;                       #-- SIWTCH DO SEGUNDO BIT            
+NET "switches<1>" LOC = "U10"| IOSTANDARD = LVCMOS33 ;                       #-- SIWTCH DO PRIMEIRO BIT            
+NET "switches<0>" LOC = "V8" | IOSTANDARD = LVCMOS33 ;                       #-- SIWTCH DO BIT LSB          
+
+#-- =========================================================================
+#-- LEDs (led<L7> downto led<L0>)
+#-- =========================================================================
+
+NET "led<7>" LOC = "W21" | IOSTANDARD = LVCMOS33 | SLEW = SLOW | DRIVE = 8 ;            #-- FLAG OVERFLOW 
+NET "led<6>" LOC = "Y22" | IOSTANDARD = LVCMOS33 | SLEW = SLOW | DRIVE = 8 ;            #-- FLAG CARRY 
+NET "led<5>" LOC = "V20" | IOSTANDARD = LVCMOS33 | SLEW = SLOW | DRIVE = 8 ;            #-- FLAG NEGATIVE 
+NET "led<4>" LOC = "V19" | IOSTANDARD = LVCMOS33 | SLEW = SLOW | DRIVE = 8 ;            #-- FLAG ZERO 
+NET "led<3>" LOC = "U19" | IOSTANDARD = LVCMOS33 | SLEW = SLOW | DRIVE = 8 ;            #-- BIT 3 (MSB)
+NET "led<2>" LOC = "U20" | IOSTANDARD = LVCMOS33 | SLEW = SLOW | DRIVE = 8 ;            #-- BIT 2 
+NET "led<1>" LOC = "T19" | IOSTANDARD = LVCMOS33 | SLEW = SLOW | DRIVE = 8 ;            #-- BIT 1 
+NET "led<0>" LOC = "R20" | IOSTANDARD = LVCMOS33 | SLEW = SLOW | DRIVE = 8 ;            #-- BIT 0 (LSB)
+
+#-- =========================================================================
+#-- TIMING CONSTRAINS , CONTROLE DE TEMPO
+#-- =========================================================================
+
+NET "clk" TNM_NET = "clk";                                                              
+TIMESPEC TS_clk = PERIOD "clk" 20 ns HIGH 50%;   
+
+#-- RASTREIA O FIO CLK E JUNTA TUDO EM UM GRUPO DE TEMPO
+#-- NOVA ESPECIFICAÇÃO DE TEMPO E APLICA A REGRA DE PERÍODO AO GRUPO DO CLK. GERANDO SINAIS DE 20 NANOSEGUNDOS
+#--      10 NANOSEGUNDOS PARA SUBIDA (ALTO) E 10 NANOSEGUNDOS PARA DESCIDA (BAIXO), ONDAS QUADRADAS
+#-- Na prática para o seu Trabalho: Você está cravando uma meta para o software: "Minha ULA e meu circuito de Debounce 
+#--      têm um prazo máximo e inegociável de 20 nanossegundos para realizar as leituras das chaves e calcular o resultado 
+#--      antes que o próximo tique do relógio aconteça". Se o seu código for muito ineficiente e a conta demorar 21 ns, o compilador vai te avisar que o Timing falhou.
