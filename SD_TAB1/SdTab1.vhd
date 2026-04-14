@@ -107,7 +107,7 @@ begin
         variable ext_a              : unsigned (4 downto 0); -- Turn 4 bit into 5 bit
         variable ext_b              : unsigned (4 downto 0); -- Turn 4 bit into 5 bit
         variable tempResult         : unsigned (4 downto 0); -- Turn 4 bit into 5 bit
-        variable shiftt_amt : integer range 0 to 15;         -- NEW: converte o operando B em inteiro para controlar a quantidade de shifts
+        variable shift_amt : integer range 0 to 15;         -- NEW: converte o operando B em inteiro para controlar a quantidade de shifts
                                                              -- Intervalo 0 a 15 cobre todos os valores possiveis de um vetor de 4 bits
 
     begin
