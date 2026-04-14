@@ -107,6 +107,8 @@ begin
         variable ext_a              : unsigned (4 downto 0); -- Turn 4 bit into 5 bit
         variable ext_b              : unsigned (4 downto 0); -- Turn 4 bit into 5 bit
         variable tempResult         : unsigned (4 downto 0); -- Turn 4 bit into 5 bit
+        variable shiftt_amt : integer range 0 to 15;         -- NEW: converte o operando B em inteiro para controlar a quantidade de shifts
+                                                             -- Intervalo 0 a 15 cobre todos os valores possiveis de um vetor de 4 bits
 
     begin
         ext_a      := unsigned ('0' & a);       -- Concatenarion, places a '0' in front of every bit
@@ -127,24 +129,91 @@ begin
             -- OR, '0' & Faz a concatenação obrigando a ter 5 bits, (unsigned(a) AND unsigned(b)) compara bit a bit, bit 0 de A com o bit 0 de B
             when "011" => tempResult := '0' & (unsigned(a) OR unsigned(b));
 
-            -- CONTIAR AS OUTRAS OPERAÇÕES -----------------------------
-            -- SÓ PRA FUNFAR -------------------------------------------
-
             -- XOR: bit a bit
             when "100" => tempResult := '0' & (unsigned(a) xor unsigned(b));
  
             -- NOT: complemento de A (B ignorado)
             when "101" => tempResult := '0' & (not unsigned(a));
  
+            ----------------------------------------------------------------
+            -- SHL: deslocamento logico a ESQUERDA
+            --
+            -- Operando A = numero que sera deslocado
+            -- Operando B = quantidade de casas (controlado por shift_amt)
+            --
+            -- Logica de controle:
+            --   shift_amt converte B para inteiro.
+            --   O case seleciona qual fatia de A forma o resultado e qual bit
+            --   de A foi o ultimo a sair pelo lado esquerdo (vai para carry).
+            --
+            --   Deslocamento N para a esquerda:
+            --     resultado  = a(3-N downto 0) concatenado com N zeros a direita
+            --     carry      = a(4-N), o ultimo bit que saiu pelo MSB
+            --
+            --   N=0 : sem deslocamento, carry=0
+            --   N=1 : resultado = a(2:0) & '0',     carry = a(3)
+            --   N=2 : resultado = a(1:0) & "00",    carry = a(2)
+            --   N=3 : resultado = a(0)  & "000",    carry = a(1)
+            --   N=4 : resultado = "0000",            carry = a(0)
+            --   N>4 : resultado = "0000",            carry = '0'
             -- SHL: deslocamento a esquerda — MSB vai para carry (bit 4)
             when "110" =>
-                tempResult(4) := a(3);
-                tempResult(3 downto 0) := unsigned(a(2 downto 0) & '0');
+                shift_amt := to_integer(unsigned(b));
+                case shift_amt is
+                    when 0 =>
+                        tempResult := '0' & unsigned(a);           -- sem deslocamento
+                    when 1 =>
+                        tempResult(4)          := a(3);            -- carry = MSB
+                        tempResult(3 downto 0) := unsigned(a(2 downto 0) & '0');
+                    when 2 =>
+                        tempResult(4)          := a(2);            -- carry = bit 2
+                        tempResult(3 downto 0) := unsigned(a(1 downto 0) & "00");
+                    when 3 =>
+                        tempResult(4)          := a(1);            -- carry = bit 1
+                        tempResult(3 downto 0) := unsigned(a(0) & "000");
+                    when 4 =>
+                        tempResult(4)          := a(0);            -- carry = LSB (ultimo a sair)
+                        tempResult(3 downto 0) := (others => '0');
+                    when others =>                                 -- N > 4: tudo zerado
+                        tempResult := (others => '0');
+                end case;
  
+            ----------------------------------------------------------------
+            -- SHR: deslocamento logico a DIREITA
+            --
+            -- Operando A = numero que sera deslocado
+            -- Operando B = quantidade de casas (controlado por shift_amt)
+            --
+            -- Logica de controle:
+            --   Espelho do SHL, mas os bits saem pelo lado direito (LSB).
+            --
+            --   N=0 : sem deslocamento, carry=0
+            --   N=1 : resultado = '0' & a(3:1),    carry = a(0)
+            --   N=2 : resultado = "00" & a(3:2),   carry = a(1)
+            --   N=3 : resultado = "000" & a(3),    carry = a(2)
+            --   N=4 : resultado = "0000",           carry = a(3)
+            --   N>4 : resultado = "0000",           carry = '0'
             -- SHR: deslocamento a direita — LSB vai para carry (bit 4)
             when others =>
-                tempResult(4) := a(0);
-                tempResult(3 downto 0) := unsigned('0' & a(3 downto 1));
+                shift_amt := to_integer(unsigned(b));
+                case shift_amt is
+                    when 0 =>
+                        tempResult := '0' & unsigned(a);           -- sem deslocamento
+                    when 1 =>
+                        tempResult(4)          := a(0);            -- carry = LSB
+                        tempResult(3 downto 0) := unsigned('0' & a(3 downto 1));
+                    when 2 =>
+                        tempResult(4)          := a(1);            -- carry = bit 1
+                        tempResult(3 downto 0) := unsigned("00" & a(3 downto 2));
+                    when 3 =>
+                        tempResult(4)          := a(2);            -- carry = bit 2
+                        tempResult(3 downto 0) := unsigned("000" & a(3));
+                    when 4 =>
+                        tempResult(4)          := a(3);            -- carry = MSB (ultimo a sair)
+                        tempResult(3 downto 0) := (others => '0');
+                    when others =>                                 -- N > 4: tudo zerado
+                        tempResult := (others => '0');
+                end case;
 
         end case;
 
@@ -219,13 +288,8 @@ begin
             elsif btn_pulse = '1' then -- Transição de estado ocorre no pulso do botão
                 case current_state is
                     when S_WAIT_OP =>
-                        -- TRAVA DE SEGURANÇA: Só avança se for 000, 001, 010 ou 011
-                        if switches(2 downto 0) = "000" or switches(2 downto 0) = "001" or switches(2 downto 0) = "010" or switches(2 downto 0) = "011" then
                             reg_op <= switches(2 downto 0); -- Captura os 3 bits menos significativos para a operação
                             current_state <= S_WAIT_A;
-                        else
-                            current_state <= S_WAIT_OP; -- Operação inválida, fica no mesmo estado
-                        end if;
 
                     when S_WAIT_A =>
                         reg_a <= switches; -- Captura os 4 bits das chaves para o operando A
@@ -314,17 +378,17 @@ begin
 
 
  --ALU instance: combinational computation
- U_ALU: entity work.ULA
-    port map (
-        op => w_op_code,
-        a => w_operando_a,
-        b => w_operando_b,
-        result => w_result,
-        flag_z => w_flag_zero,
-        flag_n => w_flag_neg,
-        flag_c => w_flag_carry,
-        flag_ov => w_flag_ovf
-    );
+    U_ALU: entity work.ULA
+        port map (
+            op => w_op_code,
+            a => w_operando_a,
+            b => w_operando_b,
+            result => w_result,
+            flag_z => w_flag_zero,
+            flag_n => w_flag_neg,
+            flag_c => w_flag_carry,
+            flag_ov => w_flag_ovf
+        );
 
 -- LED Outputs multiplexing
     p_led_mux : process(w_state_out, w_result,
