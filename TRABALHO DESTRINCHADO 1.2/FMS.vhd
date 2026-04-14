@@ -29,6 +29,7 @@ architecture Behavioral of fsm_controller is
     signal reg_op   : STD_LOGIC_VECTOR(2 downto 0) := (others => '0'); -- Registrador para a operação
     signal reg_a    : STD_LOGIC_VECTOR(3 downto 0) := (others => '0'); -- Registrador para o operando A
     signal reg_b    : STD_LOGIC_VECTOR(3 downto 0) := (others => '0'); -- Registrador para o operando B
+
 begin
 
     process(clk)
@@ -42,13 +43,8 @@ begin
             elsif btn_pulse = '1' then -- Transição de estado ocorre no pulso do botão
                 case current_state is
                     when S_WAIT_OP =>
-                        -- TRAVA DE SEGURANÇA: Só avança se for 000, 001, 010 ou 011
-                        if switches(2 downto 0) = "000" or switches(2 downto 0) = "001" or switches(2 downto 0) = "010" or switches(2 downto 0) = "011" then
                             reg_op <= switches(2 downto 0); -- Captura os 3 bits menos significativos para a operação
                             current_state <= S_WAIT_A;
-                        else
-                            current_state <= S_WAIT_OP; -- Operação inválida, fica no mesmo estado
-                        end if;
 
                     when S_WAIT_A =>
                         reg_a <= switches; -- Captura os 4 bits das chaves para o operando A
