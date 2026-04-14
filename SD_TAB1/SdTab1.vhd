@@ -167,10 +167,10 @@ begin
                         tempResult(3 downto 0) := unsigned(a(2 downto 0) & '0');
                     when 2 =>
                         tempResult(4)          := a(2);            -- carry = bit 2
-                        tempResult(3 downto 0) := unsigned(a(1 downto 0) & "00");
+                        tempResult(3 downto 0) := unsigned(a(1 downto 0) & STD_LOGIC_VECTOR'("00"));
                     when 3 =>
                         tempResult(4)          := a(1);            -- carry = bit 1
-                        tempResult(3 downto 0) := unsigned(a(0) & "000");
+                        tempResult(3 downto 0) := unsigned(a(0) & STD_LOGIC_VECTOR'("000"));
                     when 4 =>
                         tempResult(4)          := a(0);            -- carry = LSB (ultimo a sair)
                         tempResult(3 downto 0) := (others => '0');
@@ -204,10 +204,10 @@ begin
                         tempResult(3 downto 0) := unsigned('0' & a(3 downto 1));
                     when 2 =>
                         tempResult(4)          := a(1);            -- carry = bit 1
-                        tempResult(3 downto 0) := unsigned("00" & a(3 downto 2));
+                        tempResult(3 downto 0) := unsigned(STD_LOGIC_VECTOR'("00") & a(3 downto 2));
                     when 3 =>
                         tempResult(4)          := a(2);            -- carry = bit 2
-                        tempResult(3 downto 0) := unsigned("000" & a(3));
+                        tempResult(3 downto 0) := unsigned(STD_LOGIC_VECTOR'("000") & a(3));
                     when 4 =>
                         tempResult(4)          := a(3);            -- carry = MSB (ultimo a sair)
                         tempResult(3 downto 0) := (others => '0');
