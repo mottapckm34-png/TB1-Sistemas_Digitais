@@ -3,9 +3,9 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
 
---============================================================================
--- TOP_LEVEL PINAGE
---============================================================================
+
+-- TOP_LEVEL Pinage
+
 entity top_level is
     port (
         clk         : in  STD_LOGIC;
@@ -74,17 +74,17 @@ begin
                         w_flag_zero, w_flag_neg, w_flag_carry, w_flag_ovf)
     begin
         if w_state_out = "11" then
-            -- Modo RESULTADO (S_COMPUTE): exibe resultado e flags
-            led(3 downto 0) <= w_result;      -- bits do resultado
-            led(4)          <= w_flag_zero;   -- flag Zero
-            led(5)          <= w_flag_neg;    -- flag Negativo
-            led(6)          <= w_flag_carry;  -- flag Carry
-            led(7)          <= w_flag_ovf;    -- flag Overflow
+            -- RESULT mode (S_COMPUTE): displays results and flags.
+            led(3 downto 0) <= w_result;      -- result bits
+            led(4)          <= w_flag_zero;   -- Zero flag
+            led(5)          <= w_flag_neg;    -- Negative flag
+            led(6)          <= w_flag_carry;  -- Carry flag
+            led(7)          <= w_flag_ovf;    -- Overflow flag
         else
-            -- Modo ENTRADA: exibe estado atual nos 2 LEDs inferiores
-            -- w_state_out = "00" aguardando op | "01" aguardando A | "10" aguardando B
-            led(1 downto 0) <= w_state_out;   -- estado nos LEDs 0 e 1
-            led(7 downto 2) <= (others => '0'); -- demais LEDs apagados
+            -- INPUT mode: displays current status on the 2 lower LEDs.
+            --w_state_out = "00" waiting for op | "01" waiting for A | "10" waiting for B
+            led(1 downto 0) <= w_state_out;   -- state on LEDs 0 and 1
+            led(7 downto 2) <= (others => '0'); -- other LEDs are off
         end if;
     end process p_led_mux;
 
