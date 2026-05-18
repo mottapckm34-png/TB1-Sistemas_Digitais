@@ -1,0 +1,55 @@
+#-- ## Purpose : User Constraints File — maps top_level ports to Spartan-3 Starter
+
+#-- =========================================================================
+#-- CLOCK
+#-- =========================================================================
+
+NET "clk" LOC = "E12" | IOSTANDARD = LVCMOS33;                               #-- CONFIGURED CLOCK TRACE           
+
+#-- =========================================================================
+#-- RESRT (BTN_EAST)
+#-- =========================================================================
+
+NET "rst" LOC = "T16" | IOSTANDARD = LVCMOS33 | PULLDOWN ;                   #-- RESET BUTTON         
+
+#-- =========================================================================
+#-- CONFIRMATION BUTTON (BTN_WEST)
+#-- =========================================================================
+
+NET "btn_in" LOC = "U15" | IOSTANDARD = LVCMOS33 | PULLDOWN ;                #-- CONFIRMATION BUTTON             
+
+#-- =========================================================================
+#-- SWITCH
+#-- =========================================================================
+
+NET "switches<3>" LOC = "T9" | IOSTANDARD = LVCMOS33 ;                       #-- MSB BIT SWITCH            
+NET "switches<2>" LOC = "U8" | IOSTANDARD = LVCMOS33 ;                       #-- SECOND BIT SWITCH          
+NET "switches<1>" LOC = "U10"| IOSTANDARD = LVCMOS33 ;                       #-- FIRST BIT SWITCH           
+NET "switches<0>" LOC = "V8" | IOSTANDARD = LVCMOS33 ;                       #-- LSB BIT SWITCH          
+
+#-- =========================================================================
+#-- LEDs (led<L7> downto led<L0>)
+#-- =========================================================================
+
+NET "led<7>" LOC = "W21" | IOSTANDARD = LVCMOS33 | SLEW = SLOW | DRIVE = 8 ;            #-- OVERFLOW FLAG
+NET "led<6>" LOC = "Y22" | IOSTANDARD = LVCMOS33 | SLEW = SLOW | DRIVE = 8 ;            #-- CARRY FLAG 
+NET "led<5>" LOC = "V20" | IOSTANDARD = LVCMOS33 | SLEW = SLOW | DRIVE = 8 ;            #-- NEGATIVE FLAG
+NET "led<4>" LOC = "V19" | IOSTANDARD = LVCMOS33 | SLEW = SLOW | DRIVE = 8 ;            #-- ZERO FLAG
+NET "led<3>" LOC = "U19" | IOSTANDARD = LVCMOS33 | SLEW = SLOW | DRIVE = 8 ;            #-- BIT 3 (MSB)
+NET "led<2>" LOC = "U20" | IOSTANDARD = LVCMOS33 | SLEW = SLOW | DRIVE = 8 ;            #-- BIT 2 
+NET "led<1>" LOC = "T19" | IOSTANDARD = LVCMOS33 | SLEW = SLOW | DRIVE = 8 ;            #-- BIT 1 
+NET "led<0>" LOC = "R20" | IOSTANDARD = LVCMOS33 | SLEW = SLOW | DRIVE = 8 ;            #-- BIT 0 (LSB)
+
+#-- =========================================================================
+#-- TIMING CONSTRAINS , CONTROLE DE TEMPO
+#-- =========================================================================
+
+NET "clk" TNM_NET = "clk";                                                              
+TIMESPEC TS_clk = PERIOD "clk" 20 ns HIGH 50%;   
+
+#-- TRACKS THE CLK WIRE AND GATHERS EVERYTHING INTO A TIME GROUP
+#-- NEW TIME SPECIFICATION AND APPLIES THE PERIOD RULE TO THE CLK GROUP. GENERATING 20 NANOSECOND SIGNALS
+#--      10 NANOSECONDS FOR RISE (HIGH) AND 10 NANOSECONDS FOR FALL (LOW), SQUARE WAVES
+#-- In practice for your Project: You are setting a goal for the software: "My ALU and my Debounce circuit 
+#--      have a strict maximum deadline of 20 nanoseconds to read the switches and calculate the result before the next clock tick occurs".
+#-- If your code is too inefficient and the calculation takes 21 ns, the compiler will warn you that the Timing failed.
