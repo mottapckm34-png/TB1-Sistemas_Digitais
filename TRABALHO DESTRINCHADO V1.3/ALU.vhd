@@ -86,7 +86,7 @@ begin
                 shift_amt := to_integer(unsigned(b));
                 case shift_amt is
                     when 0 =>
-                        tempResult := '0' & unsigned(a);           -- sem deslocamento
+                        tempResult := '0' & unsigned(a);           -- no shift
                     when 1 =>
                         tempResult(4)          := a(3);            -- carry = MSB
                         tempResult(3 downto 0) := unsigned(a(2 downto 0) & '0');
@@ -97,9 +97,9 @@ begin
                         tempResult(4)          := a(1);            -- carry = bit 1
                         tempResult(3 downto 0) := unsigned(a(0) & STD_LOGIC_VECTOR'("000"));
                     when 4 =>
-                        tempResult(4)          := a(0);            -- carry = LSB (ultimo a sair)
+                        tempResult(4)          := a(0);            -- carry = LSB (last to exit)
                         tempResult(3 downto 0) := (others => '0');
-                    when others =>                                 -- N > 4: tudo zerado
+                    when others =>                                 -- N > 4: everything zeroed
                         tempResult := (others => '0');
                 end case;
  
